@@ -6195,3 +6195,35 @@ class _JigsawSamples(object):
         self.nb_cols = nb_cols
         self.max_steps = max_steps
         self.destinations = destinations
+
+
+class ThreeDPerspectiveTransform(meta.Augmenter):
+    """
+    Parameters
+    ----------
+    theta: radians to rotate around the x axis
+
+    phi: radians to rotate around the y axis
+    """
+    def __init__(self, theta, phi, gamma, data_type="radians", backend="cv2",
+                seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
+        super().__init__(seed, name, random_state, deterministic)
+
+        assert data_type in ["radians", "angle"], (
+            "Expected 'data_type' to be \"radians\", or \"angle\", "
+            "got %s." % (data_type,))
+        self.data_type = data_type
+
+        self.theta = iap.handle_continuous_param(
+            theta, "theta", tuple_to_uniform=True, 
+            list_to_choice=True, prefetch=True)
+        
+
+    
+    @classmethod
+    def _radians_to_angle(cls, radians):
+        return
+    
+    @classmethod
+    def _angle_to_radians(cls, angle):
+        return
