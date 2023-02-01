@@ -6201,7 +6201,9 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
     """
     Parameters
     ----------
-    theta: radians to rotate around the x axis
+    theta: angle to rotate around the x axis
+
+    phi: angle to rotate around the y axis
 
     phi: radians to rotate around the y axis
     """
@@ -6227,3 +6229,24 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
     @classmethod
     def _angle_to_radians(cls, angle):
         return
+
+    @classmethod
+    def _handle_theta_arg(cls, theta):
+        return
+    
+    @classmethod
+    def _handle_phi_arg(cls, phi):
+        return
+
+    @classmethod
+    def _handle_gamma_arg(cls, gamma):
+        return
+    
+    def _augment_batch_(self, batch, random_state, parents, hooks):
+        return
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        return
+
+    def get_parameters(self):
+        return 
