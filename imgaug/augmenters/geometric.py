@@ -6196,6 +6196,102 @@ class _JigsawSamples(object):
         self.max_steps = max_steps
         self.destinations = destinations
 
+class _ThreeDPerspectiveTransformSampleResult(object):
+    def __init__(self, theta=None, phi=None, center=None, gamma=None, data_type="radians", order=None, cval=None, mode=None) -> None:
+        assert data_type in ["radians", "angle"], (
+            "Expected 'data_type' to be \"radians\", or \"angle\", "
+            "got %s." % (data_type,))
+        self.data_type = data_type
+        
+        self.theta = theta
+        self.phi = phi
+        self.gamma = gamma
+        self.center = center
+
+        self.order = order
+        self.cval = cval
+        self.mode = mode
+    
+    def get_3dperspective_parameters(self, idx):
+        if self.data_type == "radians":
+            theta_deg = ThreeDPerspectiveTransform._radians_to_angle(self.theta[idx])
+            phi_deg = ThreeDPerspectiveTransform._radians_to_angle(self.phi[idx])
+            gamma_deg = ThreeDPerspectiveTransform._radians_to_angle(self.gamma[idx])
+
+            return_dict = {
+                "theta_rad": self.theta[idx],
+                "theta_deg": theta_deg,
+                "phi_rad" : self.phi[idx],
+                "phi_deg" : phi_deg,
+                "gamma_rad" : self.gamma[idx],
+                "gamma_deg" : gamma_deg
+            }
+        
+        else:
+            theta_rad = ThreeDPerspectiveTransform._angle_to_radians(self.theta[idx])
+            phi_rad = ThreeDPerspectiveTransform._angle_to_radians(self.phi[idx])
+            gamma_rad = ThreeDPerspectiveTransform._angle_to_radians(self.gamma[idx])
+
+            return_dict = {
+                "theta_rad": theta_rad,
+                "theta_deg": self.theta[idx],
+                "phi_rad" : phi_rad,
+                "phi_deg" : self.phi[idx],
+                "gamma_rad" : gamma_rad,
+                "gamma_deg" : self.gamma[idx]
+            }
+
+        return return_dict
+    
+    def to_matrix(self):
+        center_x, center_y = self.center
+        distance = np.sqrt((center_x * 2) **2 + (center_y * 2) **2)
+        if self.data_type == "radians":
+            theta = ThreeDPerspectiveTransform._radians_to_angle(self.theta)
+            phi = ThreeDPerspectiveTransform._radians_to_angle(self.phi)
+            gamma = ThreeDPerspectiveTransform._radians_to_angle(self.gamma)
+            focal = distance / (2 * np.sin(self.gamma) if np.sin(self.gamma) != 0 else 1)
+        else:
+            theta = self.theta
+            phi = self.phi
+            gamma = self.gamma
+
+            gamma_rad = ThreeDPerspectiveTransform._angle_to_radians(gamma)
+            focal = distance / (2 * np.sin(gamma_rad) if np.sin(gamma_rad) != 0 else 1)
+
+        # Projection 2D -> 3D matrix
+        A1 = np.array([ [1, 0, -center_x],
+                        [0, 1, -center_y],
+                        [0, 0, 1],
+                        [0, 0, 1]])
+        
+        # Rotation matrices around the X, Y, and Z axis
+        RX = np.array([ [1, 0, 0, 0],
+                        [0, np.cos(theta), -np.sin(theta), 0],
+                        [0, np.sin(theta), np.cos(theta), 0],
+                        [0, 0, 0, 1]])
+        
+        RY = np.array([ [np.cos(phi), 0, -np.sin(phi), 0],
+                        [0, 1, 0, 0],
+                        [np.sin(phi), 0, np.cos(phi), 0],
+                        [0, 0, 0, 1]])
+        
+        RZ = np.array([ [np.cos(gamma), -np.sin(gamma), 0, 0],
+                        [np.sin(gamma), np.cos(gamma), 0, 0],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]])
+
+        # Composed rotation matrix with (RX, RY, RZ)
+        R = np.dot(np.dot(RX, RY), RZ)
+
+        # Projection 3D -> 2D matrix
+        A2 = np.array([ [focal, 0, center_x, 0],
+                        [0, focal, center_y, 0],
+                        [0, 0, 1, 0]])
+
+        # Final transformation matrix
+        return np.dot(A2, np.dot(R, A1))
+
 
 class ThreeDPerspectiveTransform(meta.Augmenter):
     """
@@ -6205,9 +6301,10 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
 
     phi: angle to rotate around the y axis
 
-    phi: radians to rotate around the y axis
+    gamma: radians to rotate around the z axis
+
     """
-    def __init__(self, theta, phi, gamma, data_type="radians", backend="cv2",
+    def __init__(self, theta, phi, gamma, data_type="radians", backend="cv2", order=1, cval=0, mode="constant",
                 seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
         super().__init__(seed, name, random_state, deterministic)
 
@@ -6224,6 +6321,11 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         self.theta = self._handle_theta_arg(theta=theta)
         self.phi = self._handle_phi_arg(phi=phi)
         self.gamma = self._handle_gamma_arg(gamma=gamma)
+
+
+        self.order = _handle_order_arg(order, backend=backend)
+        self.cval = _handle_cval_arg(cval)
+        self.mode = _handle_mode_arg(mode)
     
     @classmethod
     def _radians_to_angle(cls, radians):
@@ -6256,7 +6358,55 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     
     def _augment_batch_(self, batch, random_state, parents, hooks):
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples
         return batch
+
+    def _augment_images_by_samples(self, images, samples,
+                                   image_shapes=None,
+                                   return_matrices=False):
+
+        return
+    
+    def _draw_samples(self, batch, random_state):
+        nb_samples = batch.nb_rows
+
+        def _draw_3dperspective_samples(param, random_state):
+            if isinstance(param, tuple):
+                samples = (
+                    param[0].draw_samples((nb_samples,), random_state=random_state.advance_()),
+                    param[1].draw_samples((nb_samples,), random_state=random_state.advance_())
+                )
+            
+            else:
+                samples = param.draw_samples((nb_samples,), random_state=random_state.advance_())
+                samples = (samples, samples)
+
+            return samples
+        
+        theta_samples = _draw_3dperspective_samples(self.theta, random_state=random_state.advance_())
+        phi_samples = _draw_3dperspective_samples(self.phi, random_state=random_state.advance_())
+        gamma_samples = _draw_3dperspective_samples(self.gamma, random_state=random_state.advance_())
+
+        cval_samples = self.cval.draw_samples((nb_samples, 3),
+                                              random_state=random_state.advance_())
+        mode_samples = self.mode.draw_samples((nb_samples,),
+                                              random_state=random_state.advance_())
+        order_samples = self.order.draw_samples((nb_samples,),
+                                                random_state=random_state.advance_())
+
+        return _ThreeDPerspectiveTransformSampleResult(
+            theta_samples, 
+            phi_samples, 
+            None, 
+            gamma_samples, 
+            self.data_type, 
+            order_samples, 
+            cval_samples, 
+            mode_samples
+        )
+
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         return
