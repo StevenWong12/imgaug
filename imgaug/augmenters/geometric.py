@@ -6346,14 +6346,14 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
     @classmethod
     def _handle_phi_arg(cls, phi):
         if cls().data_type == "radians":
-            theta = cls()._radians_to_angle(phi)
+            phi = cls()._radians_to_angle(phi)
         
         return iap.handle_continuous_param(phi, "phi", value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
     @classmethod
     def _handle_gamma_arg(cls, gamma):
         if cls().data_type == "radians":
-            theta = cls()._radians_to_angle(gamma)
+            gamma = cls()._radians_to_angle(gamma)
         
         return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     
