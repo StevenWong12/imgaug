@@ -6216,34 +6216,47 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             "got %s." % (data_type,))
         self.data_type = data_type
 
-        self.theta = iap.handle_continuous_param(
-            theta, "theta", tuple_to_uniform=True, 
-            list_to_choice=True, prefetch=True)
-        
+        assert backend in ["cv2"], (
+            "Expected 'backend' to be \"cv2\","
+            "got %s." % (data_type,))
+        self.backend = backend
 
+        self.theta = self._handle_theta_arg(theta=theta)
+        self.phi = self._handle_phi_arg(phi=phi)
+        self.gamma = self._handle_gamma_arg(gamma=gamma)
     
     @classmethod
     def _radians_to_angle(cls, radians):
-        return
+        return radians * 180.0 / math.pi
     
     @classmethod
     def _angle_to_radians(cls, angle):
+        angle * math.pi / 180.0
         return
 
     @classmethod
     def _handle_theta_arg(cls, theta):
-        return
+        if cls().data_type == "radians":
+            theta = cls()._radians_to_angle(theta)
+        
+        return iap.handle_continuous_param(theta, "theta", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     
     @classmethod
     def _handle_phi_arg(cls, phi):
-        return
+        if cls().data_type == "radians":
+            theta = cls()._radians_to_angle(phi)
+        
+        return iap.handle_continuous_param(phi, "phi", value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
     @classmethod
     def _handle_gamma_arg(cls, gamma):
-        return
+        if cls().data_type == "radians":
+            theta = cls()._radians_to_angle(gamma)
+        
+        return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     
     def _augment_batch_(self, batch, random_state, parents, hooks):
-        return
+        return batch
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         return
