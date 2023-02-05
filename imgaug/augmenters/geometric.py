@@ -6197,7 +6197,7 @@ class _JigsawSamples(object):
         self.destinations = destinations
 
 class _ThreeDPerspectiveTransformSampleResult(object):
-    def __init__(self, theta=None, phi=None, center=None, gamma=None, data_type="radians", order=None, cval=None, mode=None) -> None:
+    def __init__(self, theta=None, phi=None, gamma=None, image_shape=None, data_type="radians", order=None, cval=None, mode=None) -> None:
         assert data_type in ["radians", "angle"], (
             "Expected 'data_type' to be \"radians\", or \"angle\", "
             "got %s." % (data_type,))
@@ -6206,7 +6206,7 @@ class _ThreeDPerspectiveTransformSampleResult(object):
         self.theta = theta
         self.phi = phi
         self.gamma = gamma
-        self.center = center
+        self.image_shape = image_shape
 
         self.order = order
         self.cval = cval
@@ -6243,25 +6243,25 @@ class _ThreeDPerspectiveTransformSampleResult(object):
 
         return return_dict
     
-    def to_matrix(self):
-        center_x, center_y = self.center
-        distance = np.sqrt((center_x * 2) **2 + (center_y * 2) **2)
+    def to_matrix(self, idx):
+        width, height = self.image_shape[idx]
+        distance = np.sqrt(width**2 + height**2)
         if self.data_type == "radians":
-            theta = ThreeDPerspectiveTransform._radians_to_angle(self.theta)
-            phi = ThreeDPerspectiveTransform._radians_to_angle(self.phi)
-            gamma = ThreeDPerspectiveTransform._radians_to_angle(self.gamma)
-            focal = distance / (2 * np.sin(self.gamma) if np.sin(self.gamma) != 0 else 1)
+            theta = ThreeDPerspectiveTransform._radians_to_angle(self.theta[idx])
+            phi = ThreeDPerspectiveTransform._radians_to_angle(self.phi[idx])
+            gamma = ThreeDPerspectiveTransform._radians_to_angle(self.gamma[idx])
+            focal = distance / (2 * np.sin(self.gamma[idx]) if np.sin(self.gamma[idx]) != 0 else 1)
         else:
-            theta = self.theta
-            phi = self.phi
-            gamma = self.gamma
+            theta = self.theta[idx]
+            phi = self.phi[idx]
+            gamma = self.gamma[idx]
 
             gamma_rad = ThreeDPerspectiveTransform._angle_to_radians(gamma)
             focal = distance / (2 * np.sin(gamma_rad) if np.sin(gamma_rad) != 0 else 1)
 
         # Projection 2D -> 3D matrix
-        A1 = np.array([ [1, 0, -center_x],
-                        [0, 1, -center_y],
+        A1 = np.array([ [1, 0, -width/2.0],
+                        [0, 1, -height/2.0],
                         [0, 0, 1],
                         [0, 0, 1]])
         
@@ -6285,8 +6285,8 @@ class _ThreeDPerspectiveTransformSampleResult(object):
         R = np.dot(np.dot(RX, RY), RZ)
 
         # Projection 3D -> 2D matrix
-        A2 = np.array([ [focal, 0, center_x, 0],
-                        [0, focal, center_y, 0],
+        A2 = np.array([ [focal, 0, width/2.0, 0],
+                        [0, focal, height/2.0, 0],
                         [0, 0, 1, 0]])
 
         # Final transformation matrix
@@ -6358,9 +6358,10 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     
     def _augment_batch_(self, batch, random_state, parents, hooks):
+        samples = self._draw_samples(batch, random_state)
 
         if batch.images is not None:
-            batch.images = self._augment_images_by_samples
+            batch.images = self._augment_images_by_samples(batch.images. samples)
         return batch
 
     def _augment_images_by_samples(self, images, samples,
@@ -6396,11 +6397,12 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         order_samples = self.order.draw_samples((nb_samples,),
                                                 random_state=random_state.advance_())
 
+        image_shapes = [img.shape for img in batch.images]
         return _ThreeDPerspectiveTransformSampleResult(
             theta_samples, 
             phi_samples, 
-            None, 
             gamma_samples, 
+            image_shapes,
             self.data_type, 
             order_samples, 
             cval_samples, 
