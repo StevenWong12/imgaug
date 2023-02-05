@@ -10184,3 +10184,47 @@ class TestJigsaw(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.Jigsaw(nb_rows=(1, 4), nb_cols=(1, 4), max_steps=(1, 3))
         runtest_pickleable_uint8_img(aug, iterations=20, shape=(32, 32, 3))
+
+
+class Test3DPerspectiveTransform(unittest.TestCase):
+    def test_params_are_constant(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta=90, phi=180, gamma=360, data_type="angle", order=1, cval=0)
+
+        params = aug.get_parameters()
+
+        assert is_parameter_instance(params[0], iap.Deterministic)  # theta
+        assert is_parameter_instance(params[1], iap.Deterministic)  # phi
+        assert is_parameter_instance(params[2], iap.Deterministic)  # gamma
+        assert isinstance(params[3], str)  # data_type
+
+
+        assert params[0] == 90
+        assert params[1] == 180
+        assert params[2] == 360
+        assert params[3] == "angle"
+        assert params[4] == 1
+        assert params[5] == 0
+
+    def test_params_are_tulple(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta = (0, 10), phi=(-5, 5), gamma=(-10, 0))
+        params = aug.get_parameters()
+
+        assert is_parameter_instance(params[0], iap.Uniform)
+        assert is_parameter_instance(params[1], iap.Uniform)
+        assert is_parameter_instance(params[2], iap.Uniform)
+
+        assert 0 <= params[0].draw_sample() < 10
+        assert -5 <= params[1].draw_sample() < 5
+        assert -10 <= params[2].draw_sample() < 0
+
+    def test_params_are_list(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta = [1, 3, 5, 7, 9], phi = [2, 4, 6, 8, 10], gamma= [-1, -3, -5, -7, -9])
+        params = aug.get_parameters()
+
+        assert is_parameter_instance(params[0], iap.Choice)
+        assert is_parameter_instance(params[1], iap.Choice)
+        assert is_parameter_instance(params[2], iap.Choice)
+
+        assert params[0].draw_sample() in [1, 3, 5, 7, 9]
+        assert params[1].draw_sample() in [2, 4, 6, 8, 10] 
+        assert params[2].draw_sample() in [-1, -3, -5, -7, -9]

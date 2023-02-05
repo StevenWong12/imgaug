@@ -6412,4 +6412,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         return
 
     def get_parameters(self):
-        return 
+        return [
+            self.gamma, self.phi, self.theta, self.data_type,
+            self.order, self.cval, self.mode
+        ]
