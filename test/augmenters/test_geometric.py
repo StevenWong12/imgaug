@@ -10228,5 +10228,17 @@ class Test3DPerspectiveTransform(unittest.TestCase):
         assert params[1].draw_sample() in [2, 4, 6, 8, 10] 
         assert params[2].draw_sample() in [-1, -3, -5, -7, -9]
 
-    def test_sample_params(self):
-        
+    def test_draw_samples(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta = (0, 10), phi=(-5, 5), gamma=(-10, 0))
+        random_state = iarandom.RNG(43)
+
+        batch = mock.Mock()
+        batch.nb_rows = 100
+
+        sample = aug._draw_samples(batch=batch, random_state=random_state)
+
+        assert sample.theta.shape == (100,)
+        assert sample.phi.shape == (100, )
+        assert sample.gamma.shape == (100, )
+
+

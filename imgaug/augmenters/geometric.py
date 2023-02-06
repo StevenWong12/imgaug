@@ -6211,9 +6211,9 @@ class _ThreeDPerspectiveTransformSampleResult(object):
         self.cval = cval
         self.mode = mode
 
-        self.nb_samples = theta[0]
-
-        assert self.nb_samples == theta[0] == phi[0] == gamma[0], 'number of samples should match the first dim of params'
+        self.nb_samples = theta.shape[0]
+        
+        assert self.nb_samples == theta.shape[0] == phi.shape[0] == gamma.shape[0], 'number of samples should match the first dim of params'
     
     def get_3dperspective_parameters(self, idx):
         if self.data_type == "radians":
@@ -6312,11 +6312,11 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         gamma_samples = self.gamma.draw_samples((nb_samples, ), random_state=rss[2])
 
         cval_samples = self.cval.draw_samples((nb_samples, 3),
-                                              random_state=random_state[3])
+                                              random_state=rss[3])
         mode_samples = self.mode.draw_samples((nb_samples,),
-                                              random_state=random_state[4])
+                                              random_state=rss[4])
         order_samples = self.order.draw_samples((nb_samples,),
-                                                random_state=random_state[5])
+                                                random_state=rss[5])
         return _ThreeDPerspectiveTransformSampleResult(
             theta_samples, 
             phi_samples, 
