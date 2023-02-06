@@ -10241,4 +10241,18 @@ class Test3DPerspectiveTransform(unittest.TestCase):
         assert sample.phi.shape == (100, )
         assert sample.gamma.shape == (100, )
 
+    def test_get_transform_matrices(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta = (0, 10), phi=(-5, 5), gamma=(-10, 0))
+        random_state = iarandom.RNG(43)
+
+        batch = mock.Mock()
+        batch.nb_rows = 100
+
+        sample = aug._draw_samples(batch=batch, random_state=random_state)
+        
+        batch.images = np.mod(np.arange(100*20*20*3), 255).astype(np.uint8)
+        batch.images = batch.images.reshape((100, 20, 20, 3))
+        matrices = np.array(aug._get_transform_matrices(sample, batch.images))
+
+        assert matrices.shape == (100, 3, 3)
 

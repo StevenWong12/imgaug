@@ -6327,15 +6327,19 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             mode_samples
         )
 
+    '''
+    images : None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        The images to augment.
+    '''
     def _get_transform_matrices(self, params: _ThreeDPerspectiveTransformSampleResult, images):
-        assert params.nb_samples == images.count(), 'number of images should match number of params'
         image_shapes = [image.shape for image in images]
 
+        assert len(image_shapes) == params.nb_samples, 'number of image shape should match params\' nb_samples'
         matrices = []
         gen = zip(params.theta, params.phi, params.gamma, image_shapes)
 
         for (theta, phi, gamma, image_shape) in gen:
-            width, height = image_shape
+            width, height, _ = image_shape
             distance = np.sqrt(width**2 + height**2)
             focal = distance / (2 * np.sin(gamma) if np.sin(gamma) != 0 else 1)
 
