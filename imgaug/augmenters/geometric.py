@@ -6342,7 +6342,8 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         samples = self._draw_samples(batch, random_state)
 
         if batch.images is not None:
-            batch.images = self._augment_images_by_samples(batch.images. samples)
+            batch.images = self._augment_images_by_samples(batch.images, samples)
+        
         return batch
 
     '''
@@ -6361,7 +6362,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
                 image.copy(), 
                 matrix, 
                 (image.shape[1], image.shape[0]),
-                borderMode=cv2.BORDER_TRANSPARENT
+                borderMode=cv2.BORDER_CONSTANT
             )
 
             result[idx] = warped
