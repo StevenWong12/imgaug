@@ -6272,9 +6272,9 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             "got %s." % (data_type,))
         self.backend = backend
 
-        self.theta = iap.handle_continuous_param(theta, "theta", value_range=None, tuple_to_uniform=True, list_to_choice=True)
-        self.phi = iap.handle_continuous_param(phi, "phi", value_range=None, tuple_to_uniform=True, list_to_choice=True)
-        self.gamma = iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+        self.theta = self._handle_theta_param(theta)
+        self.phi = self._handle_phi_param(phi)
+        self.gamma = self._handle_gamma_param(gamma)
 
 
         self.order = _handle_order_arg(order, backend=backend)
@@ -6287,8 +6287,56 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
     
     @classmethod
     def _angle_to_radians(cls, angle):
-        angle * math.pi / 180.0
-        return
+        return angle * math.pi / 180.0
+
+    def _handle_theta_param(self, theta):
+        if self.data_type == "radians":
+            return iap.handle_continuous_param(theta, "theta", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+
+        if isinstance(theta, tuple):
+            theta = (
+                ThreeDPerspectiveTransform._angle_to_radians(theta[0]),
+                ThreeDPerspectiveTransform._angle_to_radians(theta[1])
+            )
+        elif isinstance(theta, list):
+            theta = map(ThreeDPerspectiveTransform._angle_to_radians, theta)
+        else:
+            theta = ThreeDPerspectiveTransform._angle_to_radians(theta)
+
+        return iap.handle_continuous_param(theta, "theta", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+    
+    def _handle_phi_param(self, phi):
+        if self.data_type == "radians":
+            return iap.handle_continuous_param(phi, "phi", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+
+        if isinstance(phi, tuple):
+            phi = (
+                ThreeDPerspectiveTransform._angle_to_radians(phi[0]),
+                ThreeDPerspectiveTransform._angle_to_radians(phi[1])
+            )
+        elif isinstance(phi, list):
+            phi = map(ThreeDPerspectiveTransform._angle_to_radians, phi)
+        else:
+            phi = ThreeDPerspectiveTransform._angle_to_radians(phi)
+
+        return iap.handle_continuous_param(phi, "phi", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+
+    def _handle_gamma_param(self, gamma):
+        if self.data_type == "radians":
+            return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+
+        if isinstance(gamma, tuple):
+            gamma = (
+                ThreeDPerspectiveTransform._angle_to_radians(gamma[0]),
+                ThreeDPerspectiveTransform._angle_to_radians(gamma[1])
+            )
+        elif isinstance(gamma, list):
+            gamma = map(ThreeDPerspectiveTransform._angle_to_radians, gamma)
+        else:
+            gamma = ThreeDPerspectiveTransform._angle_to_radians(gamma)
+
+        return iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+
     
     def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch, random_state)
@@ -6297,11 +6345,28 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             batch.images = self._augment_images_by_samples(batch.images. samples)
         return batch
 
+    '''
+    images : None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        The images to augment.
+    '''
     def _augment_images_by_samples(self, images, samples,
-                                   image_shapes=None,
                                    return_matrices=False):
+        result = images
+        matrices = self._get_transform_matrices(samples, images)
 
-        return
+        gen = enumerate(zip(images, matrices, samples.cval, samples.mode))
+
+        for idx, (image, matrix, cval, mode) in gen:
+            warped = cv2.warpPerspective(
+                image.copy(), 
+                matrix, 
+                (image.shape[1], image.shape[0]),
+                borderMode=cv2.BORDER_TRANSPARENT
+            )
+
+            result[idx] = warped
+
+        return result
     
     def _draw_samples(self, batch, random_state):
         rss = random_state.duplicate(6)
@@ -6339,7 +6404,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         gen = zip(params.theta, params.phi, params.gamma, image_shapes)
 
         for (theta, phi, gamma, image_shape) in gen:
-            width, height, _ = image_shape
+            height, width, _ = image_shape
             distance = np.sqrt(width**2 + height**2)
             focal = distance / (2 * np.sin(gamma) if np.sin(gamma) != 0 else 1)
 
@@ -6372,9 +6437,16 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             A2 = np.array([ [focal, 0, width/2.0, 0],
                             [0, focal, height/2.0, 0],
                             [0, 0, 1, 0]])
+            
+             # Translation matrix
+            T = np.array([ [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                        [0, 0, 1, focal],
+                        [0, 0, 0, 1]])
+
 
             # Final transformation matrix
-            mat = np.dot(A2, np.dot(R, A1))
+            mat = np.dot(A2, np.dot(T, np.dot(R, A1)))
 
             matrices.append(mat)
 
