@@ -6347,7 +6347,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             batch.images = self._augment_images_by_samples(batch.images, samples)
         
         if batch.segmentation_maps is not None:
-            batch.segmentation_maps = self._augment_maps_by_samples(batch.segmentation_maps, "segmentation_map", samples, original_images)
+            batch.segmentation_maps = self._augment_maps_by_samples(batch.segmentation_maps, "arr", samples, original_images)
 
         return batch
 
