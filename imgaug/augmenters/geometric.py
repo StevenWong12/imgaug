@@ -6398,9 +6398,8 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
                     borderMode=cv2.BORDER_CONSTANT
                     )
 
-            if arr.ndim == 2:
-                warped = warped[:, np.newaxis]
-                
+            warped = warped[..., np.newaxis]
+
             setattr(augmentable, arr_attr_name, warped)
         
         return result

@@ -10256,3 +10256,22 @@ class Test3DPerspectiveTransform(unittest.TestCase):
 
         assert matrices.shape == (100, 3, 3)
 
+
+    def test_segmentation_map_transform(self):
+        aug = iaa.ThreeDPerspectiveTransform(theta=-45, phi=0, gamma=0, data_type="angle")
+        
+        random_state = iarandom.RNG(43)
+        batch = mock.Mock()
+        batch.images = np.mod(np.arange(20*20*3), 255).astype(np.uint8)
+        batch.images = batch.images.reshape((1, 20, 20, 3))
+        batch.nb_rows = 1
+
+        sample = aug._draw_samples(batch=batch, random_state=random_state)
+
+        segmentation_map = np.ones((20, 20),dtype=np.uint8)
+        batch.segmentation_maps = [SegmentationMapsOnImage(segmentation_map, (20, 20, 3))]
+
+        seg_aug = aug._augment_maps_by_samples(batch.segmentation_maps, "arr", sample, batch.images)[0]
+        assert seg_aug.get_arr().shape == (20, 20)
+        
+    
