@@ -6389,14 +6389,18 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
             arr = getattr(augmentable, arr_attr_name)
 
             height, width, _ = image.shape
-            
-            warped = cv2.warpPerspective(
-                arr.astype(np.uint8), 
-                matrix, 
-                (width, height),
-                borderMode=cv2.BORDER_CONSTANT
-            )
 
+            # TODO@steven: only support segmentation map now
+            warped = cv2.warpPerspective(
+                    arr.copy().astype(np.uint8), 
+                    matrix, 
+                    (width, height),
+                    borderMode=cv2.BORDER_CONSTANT
+                    )
+
+            if arr.ndim == 2:
+                warped = warped[:, np.newaxis]
+                
             setattr(augmentable, arr_attr_name, warped)
         
         return result
