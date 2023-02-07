@@ -6341,9 +6341,14 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
     def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch, random_state)
 
+        original_images = batch.images
+
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images, samples)
         
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(batch.segmentation_maps, "segmentation_map", samples, original_images)
+
         return batch
 
     '''
@@ -6369,6 +6374,37 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
 
         return result
     
+    '''
+    augmentables : None or list of (H,W,C)/(H,W) ndarray
+        The images to augment.
+    '''
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name, 
+                                samples, samples_images):
+        result = augmentables
+        matrices = self._get_transform_matrices(samples, samples_images)
+
+        gen = enumerate(zip(augmentables, matrices, samples_images))
+
+        for _, (augmentable, matrix, image) in gen:
+            arr = getattr(augmentable, arr_attr_name)
+
+            height, width, _ = image.shape
+            
+            warped = cv2.warpPerspective(
+                arr.astype(np.uint8), 
+                matrix, 
+                (width, height),
+                borderMode=cv2.BORDER_CONSTANT
+            )
+
+            setattr(augmentable, arr_attr_name, warped)
+        
+        return result
+
+
+            
+
+
     def _draw_samples(self, batch, random_state):
         rss = random_state.duplicate(6)
         nb_samples = batch.nb_rows
@@ -6454,8 +6490,6 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
         return matrices
 
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return
 
     def get_parameters(self):
         return [
