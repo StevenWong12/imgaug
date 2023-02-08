@@ -10274,29 +10274,6 @@ class Test3DPerspectiveTransform(unittest.TestCase):
         seg_aug = aug._augment_maps_by_samples(batch.segmentation_maps, "arr", sample, batch.images)[0]
         assert seg_aug.get_arr().shape == (20, 20)
 
-    def test_temp(self):
-        threed_perspect = iaa.ThreeDPerspectiveTransform(theta=-45, phi=0, gamma=0, data_type="angle")
-        piece = iaa.PiecewiseAffine(scale=(0.01, 0.05))
-
-        img = ia.data.quokka((300, 300))
-        seg_map = np.ones((300, 300), dtype=np.uint8)
-        seg_map = SegmentationMapsOnImage(seg_map, (300, 300, 3))
-        resize = iaa.PadToFixedSize(width=150, height=150, position="center")
-        
-        seq = iaa.Sequential([resize, piece, threed_perspect, piece, piece])
-
-        img_aug, seg_aug = seq(images=[img], segmentation_maps=[seg_map])
-        img_aug, seg_aug = img_aug[0], seg_aug[0]
-
-        cells = [
-            img,
-            seg_map.draw_on_image(img)[0],
-            img_aug,
-            seg_aug.draw_on_image(img_aug)[0]
-        ]
-
-
-        ia.show_grid(cells, cols=4)
         
         
     
