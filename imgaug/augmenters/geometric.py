@@ -6299,7 +6299,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
                 ThreeDPerspectiveTransform._angle_to_radians(theta[1])
             )
         elif isinstance(theta, list):
-            theta = map(ThreeDPerspectiveTransform._angle_to_radians, theta)
+            theta = list(map(ThreeDPerspectiveTransform._angle_to_radians, theta))
         else:
             theta = ThreeDPerspectiveTransform._angle_to_radians(theta)
 
@@ -6315,7 +6315,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
                 ThreeDPerspectiveTransform._angle_to_radians(phi[1])
             )
         elif isinstance(phi, list):
-            phi = map(ThreeDPerspectiveTransform._angle_to_radians, phi)
+            phi = list(map(ThreeDPerspectiveTransform._angle_to_radians, phi))
         else:
             phi = ThreeDPerspectiveTransform._angle_to_radians(phi)
 
@@ -6331,7 +6331,7 @@ class ThreeDPerspectiveTransform(meta.Augmenter):
                 ThreeDPerspectiveTransform._angle_to_radians(gamma[1])
             )
         elif isinstance(gamma, list):
-            gamma = map(ThreeDPerspectiveTransform._angle_to_radians, gamma)
+            gamma = list(map(ThreeDPerspectiveTransform._angle_to_radians, gamma))
         else:
             gamma = ThreeDPerspectiveTransform._angle_to_radians(gamma)
 
